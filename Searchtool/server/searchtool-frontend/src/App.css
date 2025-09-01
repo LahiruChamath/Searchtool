@@ -1,0 +1,88 @@
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f7f9fa;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  text-align: center;
+  margin-top: 30px;
+  color: #2c3e50;
+  letter-spacing: 1px;
+}
+
+.consultants-header {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 30px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.consultants-search {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  width: 260px;
+  font-size: 1em;
+}
+
+.consultants-filter {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1em;
+}
+
+.consultants-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.consultant-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  transition: box-shadow 0.2s;
+}
+
+.consultant-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.consultant-img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #eee;
+}
+
+.consultant-info h2 {
+  margin: 0 0 10px 0;
+  font-size: 1.3em;
+  color: #2c3e50;
+}
+
+.consultant-info p {
+  margin: 4px 0;
+  font-size: 0.98em;
+  color: #555;
+}
+
+.no-results {
+  text-align: center;
+  font-size: 1.2em;
+  color: #888;
+  margin-top: 40px;
+}

@@ -1,0 +1,66 @@
+:root{
+  --bg:#f7faf9; --surface:#fff; --surface-2:#f3f6f5; --border:#e5e7eb;
+  --text:#101828; --muted:#667085; --brand:#2e7d32; --brand-600:#2b6f2f;
+  --radius:14px; --radius-sm:10px; --shadow:0 8px 24px rgba(16,24,40,.06);
+}
+
+.admin-page{ max-width: 1100px; margin: 26px auto; padding: 0 18px; color: var(--text); }
+.admin-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px; }
+
+.users-topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.users-topbar h1{ margin:0; font-size:22px; font-weight:800; }
+
+.btn{ border:1px solid var(--border); background:#fff; color:var(--text); padding:8px 12px; border-radius:999px; cursor:pointer; }
+.btn:hover{ border-color:#d3d8df; box-shadow:0 0 0 3px rgba(46,125,50,.12); }
+
+.admin-error, .admin-muted{
+  margin:10px 0; padding:10px 12px; border-radius:var(--radius-sm);
+  border:1px solid var(--border); background:#fff; color:var(--muted);
+}
+.admin-error{ border-color:#f1c0c0; color:#b42318; background:#fff6f6; }
+
+.table-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+.users-table{ width:100%; min-width:720px; border-collapse:collapse; }
+.users-table thead th{
+  text-align:left; font-weight:700; padding:12px; border-bottom:1px solid var(--border);
+  background:var(--surface-2);
+}
+.users-table tbody td{
+  padding:12px; border-bottom:1px solid var(--border);
+  white-space:normal; overflow-wrap:anywhere; word-break:break-word;
+}
+.wrap{ white-space:normal; overflow-wrap:anywhere; word-break:break-word; }
+
+.role-select{
+  width:100%; min-width:140px; padding:8px 10px; border:1px solid var(--border);
+  border-radius:10px; background:#fff; color:var(--text);
+}
+
+.admin-pill{
+  display:inline-flex; align-items:center; padding:4px 8px; border:1px solid var(--border);
+  border-radius:999px; background:#fff; color:var(--muted); font-size:12px;
+}
+
+.admin-pill.admin-pill--admin{ border-color:var(--brand); background:rgba(46,125,50,.12); color:var(--brand-600); font-weight:600; }
+
+.btn-danger {
+  border-color: #f1c0c0;
+  background: #fff;
+  color: #b42318;
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: unset;
+  width: auto;
+  max-width: 120px;
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-danger:hover {
+  background: #fff6f6;
+  color: #a31515;
+  border-color: #e57373;
+}
