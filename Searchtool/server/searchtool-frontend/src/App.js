@@ -6,6 +6,7 @@ import Login from './Login';
 import AdminUsers from './AdminUsers';
 import AdminPermissions from './AdminPermissions';
 import { AuthProvider } from './AuthContext';
+import AddConsultant from "./AddConsultant";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/permissions" element={<AdminPermissions />} />
+          <Route path="/consultants/new" element={<AddConsultant />} />
         </Routes>
       </Router>
     </AuthProvider>

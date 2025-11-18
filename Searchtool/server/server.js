@@ -10,10 +10,12 @@ const authRouter = require("./routes/auth");
 const usersRouter = require("./routes/users");
 const permissionsRouter = require("./routes/permissions");
 
+const FRONTEND = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+
 const app = express();
 dbConnect();
 
-app.use(cors({ origin: process.env.FRONTEND_ORIGIN || "*", exposedHeaders: ["Authorization"] }));
+app.use(cors({ origin: FRONTEND, credentials: true, exposedHeaders: ["Authorization"] }));
 app.use(express.json());
 app.use("/uploads", cors({ origin: process.env.FRONTEND_ORIGIN || "*" }), express.static(path.join(__dirname, "uploads")));
 
