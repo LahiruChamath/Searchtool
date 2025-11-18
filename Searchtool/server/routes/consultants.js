@@ -10,11 +10,11 @@ const auth = require("../middleware/auth");
 
 // ---------- helpers ----------
 function stripUndefinedDeep(obj) {
-  if (obj == null || typeof obj !== 'object') return obj;
+  if (obj == null || typeof obj !== "object") return obj;
   const out = Array.isArray(obj) ? [] : {};
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
-    if (v && typeof v === 'object') {
+    if (v && typeof v === "object") {
       const nested = stripUndefinedDeep(v);
       if (Array.isArray(nested)) out[k] = nested;
       else if (Object.keys(nested).length > 0) out[k] = nested;
@@ -33,11 +33,14 @@ function buildSearch(doc) {
     ...(doc.tags || []),
     ...(doc.sectors || []),
     ...(doc.qualifications || []),
-    ...(doc.projects || []).flatMap(p => [p.title, p.client, ...(p.funders || [])]),
-    ...(doc.experience || []).flatMap(e => [e.role, e.org, e.location, ...(e.highlights || [])])
-  ].filter(Boolean).map(String);
+    ...(doc.associations || []),
+    ...(doc.projects || []).flatMap((p) => [p.title, p.client, ...(p.funders || [])]),
+    ...(doc.experience || []).flatMap((e) => [e.role, e.org, e.location, ...(e.highlights || [])]),
+  ]
+    .filter(Boolean)
+    .map(String);
   const text = parts.join(" ").toLowerCase();
-  const keywords = Array.from(new Set(parts.map(p => p.toLowerCase())));
+  const keywords = Array.from(new Set(parts.map((p) => p.toLowerCase())));
   doc.search = doc.search || {};
   doc.search.text = text;
   doc.search.keywords = keywords;
@@ -47,6 +50,15 @@ async function can(req, key) {
   if (!req.user) return false;
   const row = await Permission.findOne({ role: req.user.role });
   return !!row?.[key];
+}
+
+async function canEditAssociations(req) {
+  if (!req.user) return false;
+  try {
+    const row = await Permission.findOne({ role: req.user.role }).lean();
+    if (row && typeof row.canEditAssociations === "boolean") return row.canEditAssociations;
+  } catch (_) {}
+  return req.user.role === "admin" || req.user.role === "editor";
 }
 
 // ---------- uploads setup ----------
@@ -93,12 +105,14 @@ const uploadCV = multer({ storage: cvStorage, fileFilter: cvFilter });
 router.post("/", auth(["admin", "editor"]), async (req, res) => {
   try {
     const body = { ...req.body };
-    if (!body.emails && body.contacts?.emails) body.emails = body.contacts.emails.map(e => e.value);
-    if (!body.phones && body.contacts?.phones) body.phones = body.contacts.phones.map(p => p.value);
+    if (!body.emails && body.contacts?.emails) body.emails = body.contacts.emails.map((e) => e.value);
+    if (!body.phones && body.contacts?.phones) body.phones = body.contacts.phones.map((p) => p.value);
     buildSearch(body);
     const doc = await Consultant.create(body);
     res.status(201).json(doc);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 // read all
@@ -106,7 +120,9 @@ router.get("/", async (_, res) => {
   try {
     const list = await Consultant.find().sort({ name: 1 });
     res.json(list);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // read one
@@ -115,15 +131,17 @@ router.get("/:id", async (req, res) => {
     const doc = await Consultant.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: "Not found" });
     res.json(doc);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// update (admin only) — safe set (strip undefined, don't clobber media.cv)
-router.put("/:id", auth(["admin"]), async (req, res) => {
+// update (admin/editor)  <-- CHANGED
+router.put("/:id", auth(["admin", "editor"]), async (req, res) => {
   try {
     const body = { ...req.body };
-    if (!body.emails && body.contacts?.emails) body.emails = body.contacts.emails.map(e => e.value);
-    if (!body.phones && body.contacts?.phones) body.phones = body.contacts.phones.map(p => p.value);
+    if (!body.emails && body.contacts?.emails) body.emails = body.contacts.emails.map((e) => e.value);
+    if (!body.phones && body.contacts?.phones) body.phones = body.contacts.phones.map((p) => p.value);
     buildSearch(body);
 
     const payload = stripUndefinedDeep(body);
@@ -139,20 +157,24 @@ router.put("/:id", auth(["admin"]), async (req, res) => {
     );
     if (!updated) return res.status(404).json({ error: "Not found" });
     res.json(updated);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 // delete (admin only)
-router.delete("/:id", auth(["admin"]), async (req, res) => {
+router.delete("/:id", auth(["admin", "editor"]), async (req, res) => {
   try {
     const removed = await Consultant.findByIdAndDelete(req.params.id);
     if (!removed) return res.status(404).json({ error: "Not found" });
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// upload profile photo (does NOT touch media.cv)
-router.post("/:id/photo", uploadPhoto.single("photo"), async (req, res) => {
+// upload profile photo (admin/editor)  <-- CHANGED (added auth)
+router.post("/:id/photo", auth(["admin", "editor"]), uploadPhoto.single("photo"), async (req, res) => {
   try {
     const c = await Consultant.findById(req.params.id);
     if (!c) return res.status(404).json({ error: "Consultant not found" });
@@ -164,11 +186,13 @@ router.post("/:id/photo", uploadPhoto.single("photo"), async (req, res) => {
     await c.save();
 
     res.json({ message: "Photo uploaded", url: publicUrl, consultant: c });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// upload CV (writes media.cv object)
-router.post("/:id/cv", uploadCV.single("cv"), async (req, res) => {
+// upload CV (admin/editor)  <-- CHANGED (added auth)
+router.post("/:id/cv", auth(["admin", "editor"]), uploadCV.single("cv"), async (req, res) => {
   try {
     const c = await Consultant.findById(req.params.id);
     if (!c) return res.status(404).json({ error: "Consultant not found" });
@@ -176,11 +200,9 @@ router.post("/:id/cv", uploadCV.single("cv"), async (req, res) => {
 
     const publicUrl = `${req.protocol}://${req.get("host")}/uploads/cv/${req.file.filename}`;
 
-    // legacy fields for compatibility
-    c.cvUrl = publicUrl;
-    c.cv = publicUrl;
+    c.cvUrl = publicUrl; // legacy
+    c.cv = publicUrl;    // legacy
 
-    // structured media metadata
     c.media = {
       ...(c.media || {}),
       cv: {
@@ -188,15 +210,17 @@ router.post("/:id/cv", uploadCV.single("cv"), async (req, res) => {
         filename: req.file.filename,
         mime: req.file.mimetype,
         size: req.file.size,
-      }
+      },
     };
 
     await c.save();
     res.json({ message: "CV uploaded", cvUrl: publicUrl, consultant: c });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// add single experience (permissioned)
+// experience add/edit/delete (permission-driven)
 router.post("/:id/experience", auth(), async (req, res) => {
   try {
     if (!(await can(req, "canEditExperience"))) return res.status(403).json({ error: "No permission" });
@@ -205,19 +229,21 @@ router.post("/:id/experience", auth(), async (req, res) => {
     if (!doc) return res.status(404).json({ error: "Not found" });
     doc.experience = doc.experience || [];
     doc.experience.push({
-      role, org,
+      role,
+      org,
       start: start ? new Date(start) : null,
       end: end ? new Date(end) : null,
       location,
-      highlights: Array.isArray(highlights) ? highlights : (highlights ? [highlights] : [])
+      highlights: Array.isArray(highlights) ? highlights : highlights ? [highlights] : [],
     });
     buildSearch(doc);
     await doc.save();
     res.json(doc);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
-// edit one experience by index
 router.put("/:id/experience/:idx", auth(), async (req, res) => {
   try {
     if (!(await can(req, "canEditExperience"))) return res.status(403).json({ error: "No permission" });
@@ -229,10 +255,11 @@ router.put("/:id/experience/:idx", auth(), async (req, res) => {
     buildSearch(doc);
     await doc.save();
     res.json(doc);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
-// delete one experience by index
 router.delete("/:id/experience/:idx", auth(), async (req, res) => {
   try {
     if (!(await can(req, "canEditExperience"))) return res.status(403).json({ error: "No permission" });
@@ -244,25 +271,79 @@ router.delete("/:id/experience/:idx", auth(), async (req, res) => {
     buildSearch(doc);
     await doc.save();
     res.json(doc);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
-// add review (permissioned roles)
-router.post("/:id/reviews", auth(), async (req, res) => {
+// ---------- associations endpoints ----------
+router.get("/:id/associations", async (req, res) => {
   try {
-    const { rating, comment } = req.body;
-    if (!(await can(req, "canAddReview"))) return res.status(403).json({ error: "No permission" });
+    const doc = await Consultant.findById(req.params.id).select("associations");
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    res.json({ associations: doc.associations || [] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Replace whole array
+router.put("/:id/associations", auth(["admin", "editor"]), async (req, res) => {
+  try {
+    if (!(await canEditAssociations(req))) return res.status(403).json({ error: "No permission" });
+    const { associations } = req.body;
+    if (!Array.isArray(associations)) {
+      return res.status(400).json({ error: "associations must be an array of strings" });
+    }
+    const deduped = Array.from(new Set(associations.map(s => String(s).trim()).filter(Boolean)));
+    const doc = await Consultant.findByIdAndUpdate(
+      req.params.id,
+      { $set: { associations: deduped } },
+      { new: true }
+    );
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    res.json({ associations: doc.associations });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Add single value
+router.post("/:id/associations", auth(["admin", "editor"]), async (req, res) => {
+  try {
+    if (!(await canEditAssociations(req))) return res.status(403).json({ error: "No permission" });
+    const { value } = req.body;
+    const v = String(value || "").trim();
+    if (!v) return res.status(400).json({ error: "value is required" });
+
     const doc = await Consultant.findById(req.params.id);
     if (!doc) return res.status(404).json({ error: "Not found" });
-    const r = { userId: req.user.id, userName: req.user.name || req.user.email, rating: Number(rating), comment: comment || "" };
-    doc.reviews = doc.reviews || [];
-    doc.reviews.push(r);
-    doc.ratingCount = doc.reviews.length;
-    const sum = doc.reviews.reduce((a, b) => a + (b.rating || 0), 0);
-    doc.ratingAvg = doc.ratingCount ? Math.round((sum / doc.ratingCount) * 10) / 10 : 0;
+    const set = new Set(doc.associations || []);
+    set.add(v);
+    doc.associations = Array.from(set);
     await doc.save();
-    res.json(doc);
-  } catch (e) { res.status(400).json({ error: e.message }); }
+    res.json({ associations: doc.associations });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// Remove by index
+router.delete("/:id/associations/:idx", auth(["admin", "editor"]), async (req, res) => {
+  try {
+    if (!(await canEditAssociations(req))) return res.status(403).json({ error: "No permission" });
+    const i = Number(req.params.idx);
+    const doc = await Consultant.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    if (!Array.isArray(doc.associations) || i < 0 || i >= doc.associations.length) {
+      return res.status(400).json({ error: "Bad index" });
+    }
+    doc.associations.splice(i, 1);
+    await doc.save();
+    res.json({ associations: doc.associations });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 module.exports = router;
