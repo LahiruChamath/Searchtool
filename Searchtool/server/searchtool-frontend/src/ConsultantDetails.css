@@ -244,3 +244,74 @@
 .assoc-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:6px 0; border-bottom:1px dashed #e7e7e7; }
 .assoc-text { flex:1; word-break:break-word; }
 .btn.danger { background:#ffeaea; border:1px solid #f3b7b7; color:#9b1c1c; }
+
+.rating-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.rating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.35);
+}
+
+.rating-q {
+  flex: 1;
+  min-width: 0;
+}
+
+.rating-label {
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+
+.rating-weight {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.rating-scale {
+  display: flex;
+  gap: 6px;
+}
+
+.rating-choice {
+  min-width: 32px;
+  padding: 4px 0;
+  border-radius: 999px;
+  border: 1px solid rgba(113, 206, 99, 0.6);
+  background: transparent;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.rating-choice.active {
+  border-color: rgba(56, 189, 248, 0.9);
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgba(78, 142, 32, 0.25),
+    rgba(9, 104, 13, 0.98)
+  );
+  box-shadow: 0 0 16px rgba(130, 243, 120, 0.45);
+}
+
+/* in ConsultantDetails.css */
+
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

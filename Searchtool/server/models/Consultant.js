@@ -27,12 +27,72 @@ const MediaSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// ---------- Review weights & helpers ----------
+const REVIEW_WEIGHTS = {
+  technical_expertise: 0.25,    // 25%
+  relevant_experience: 0.15,    // 15%
+  proposed_methodology: 0.15,   // 15%
+  communication_skills: 0.10,   // 10%
+  involvement_tasks: 0.15,      // 15%
+  timeliness: 0.10,             // 10%
+  cost_effectiveness: 0.10,     // 10%
+};
+
+function computeWeightedReviewScore(review) {
+  if (!review) return 0;
+
+  // Prefer structured answers if present
+  if (review.answers) {
+    let sum = 0;
+    let totalW = 0;
+    for (const [key, weight] of Object.entries(REVIEW_WEIGHTS)) {
+      const v = review.answers[key];
+      if (typeof v === "number" && v > 0) {
+        sum += v * weight;
+        totalW += weight;
+      }
+    }
+    if (totalW > 0) {
+      return sum / totalW; // still on 1–5 scale
+    }
+  }
+
+  // Fallback to overallRating, then legacy rating
+  if (typeof review.overallRating === "number" && review.overallRating > 0) {
+    return review.overallRating;
+  }
+  if (typeof review.rating === "number" && review.rating > 0) {
+    return review.rating;
+  }
+  return 0;
+}
+
 const ReviewSchema = new mongoose.Schema(
   {
     userId: { type: String, required: true, index: true },
     userName: { type: String, trim: true },
-    rating: { type: Number, required: true, min: 1, max: 5 },
+
+    // Legacy fields (still kept for backward compatibility)
+    rating: { type: Number, min: 1, max: 5 },
     comment: { type: String, trim: true },
+
+    // NEW: project metadata
+    projectName: { type: String, trim: true },
+    projectDate: { type: String, trim: true }, // store as string (e.g. 2025-01-15)
+
+    // New structured answers based on the evaluation matrix
+    answers: {
+      technical_expertise: { type: Number, min: 1, max: 5 },
+      relevant_experience: { type: Number, min: 1, max: 5 },
+      proposed_methodology: { type: Number, min: 1, max: 5 },
+      communication_skills: { type: Number, min: 1, max: 5 },
+      involvement_tasks: { type: Number, min: 1, max: 5 },
+      timeliness: { type: Number, min: 1, max: 5 },
+      cost_effectiveness: { type: Number, min: 1, max: 5 },
+    },
+
+    // Cached overall rating (1–5) computed via weights above
+    overallRating: { type: Number, min: 0, max: 5 },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
@@ -64,10 +124,12 @@ const consultantSchema = new mongoose.Schema(
         if (!Array.isArray(arr)) return [];
         return Array.from(
           new Set(
-            arr.map(s => String(s || "").trim()).filter(Boolean)
+            arr
+              .map((s) => String(s || "").trim())
+              .filter(Boolean)
           )
         );
-      }
+      },
     },
 
     reviews: { type: [ReviewSchema], default: [] },
@@ -81,15 +143,26 @@ const consultantSchema = new mongoose.Schema(
 consultantSchema.methods.recomputeRatings = function recomputeRatings() {
   const n = this.reviews?.length || 0;
   this.ratingCount = n;
-  this.ratingAvg = n
-    ? Math.round(
-        (this.reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / n) * 10
-      ) / 10
-    : 0;
+
+  if (!n) {
+    this.ratingAvg = 0;
+    return this.ratingAvg;
+  }
+
+  const total = this.reviews.reduce(
+    (sum, r) => sum + computeWeightedReviewScore(r),
+    0
+  );
+  this.ratingAvg = Math.round((total / n) * 10) / 10;
   return this.ratingAvg;
 };
 
-consultantSchema.index({ name: "text", summary: "text", expertise: 1, tags: 1 });
+consultantSchema.index({
+  name: "text",
+  summary: "text",
+  expertise: 1,
+  tags: 1,
+});
 consultantSchema.index({ category: 1 });
 consultantSchema.index({ "media.cv.filename": 1 });
 

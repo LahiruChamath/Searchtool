@@ -27,7 +27,6 @@ export default function ConsultantsList() {
 
   // URL-backed state
   const [nameQ, setNameQ] = useState(params.get('q') || '');
-  const [expQ, setExpQ] = useState(params.get('exp') || '');
   const [expertise, setExpertise] = useState(params.get('expertise') || 'All');
   const [qual, setQual] = useState(params.get('qual') || 'All');
   const [ratingMin, setRatingMin] = useState(params.get('r') || 'All');
@@ -72,32 +71,49 @@ export default function ConsultantsList() {
     return ['All', ...Array.from(set).sort()];
   }, [rows]);
 
-  // filtering
+  // filtering (single smart search bar with comma-separated tokens)
   const filtered = useMemo(() => {
-    const q1 = nameQ.trim().toLowerCase();
-    const q2 = expQ.trim().toLowerCase();
+    const tokens = nameQ
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
 
     return rows.filter((c) => {
-      const basicsMatch =
-        q1 === '' ||
-        (c.name || '').toLowerCase().includes(q1) ||
-        toArr(c.expertise).some((x) => (x || '').toLowerCase().includes(q1)) ||
-        getEmails(c).some((x) => (x || '').toLowerCase().includes(q1)) ||
-        getPhones(c).some((x) => (x || '').toLowerCase().includes(q1)) ||
-        toArr(c.tags).some((x) => (x || '').toLowerCase().includes(q1));
-      if (!basicsMatch) return false;
+      // Build a combined text haystack from many fields
+      const parts = [
+        c.name,
+        c.summary,
+        ...toArr(c.expertise),
+        ...toArr(c.tags),
+        ...toArr(c.sectors),
+        ...toArr(c.qualifications),
+        ...toArr(c.associations),
+        ...toArr(c.projects).flatMap((p) => [
+          p?.title,
+          p?.client,
+          ...toArr(p?.funders),
+        ]),
+        ...toArr(c.experience).flatMap((e) => [
+          e?.role,
+          e?.org,
+          e?.location,
+          ...toArr(e?.highlights),
+        ]),
+        ...getEmails(c),
+        ...getPhones(c),
+      ];
 
-      const expMatch =
-        q2 === '' ||
-        toArr(c.experience).some(
-          (e) =>
-            (e.role || '').toLowerCase().includes(q2) ||
-            (e.org || '').toLowerCase().includes(q2) ||
-            (e.location || '').toLowerCase().includes(q2) ||
-            toArr(e.highlights).some((h) => (h || '').toLowerCase().includes(q2))
-        );
-      if (!expMatch) return false;
+      const haystack = parts
+        .filter(Boolean)
+        .map((x) => String(x).toLowerCase())
+        .join(' ');
 
+      // All tokens must match somewhere in the haystack
+      const searchOk =
+        tokens.length === 0 || tokens.every((token) => haystack.includes(token));
+      if (!searchOk) return false;
+
+      // Existing dropdown filters
       const expSelOk = expertise === 'All' || toArr(c.expertise).includes(expertise);
       if (!expSelOk) return false;
 
@@ -108,7 +124,7 @@ export default function ConsultantsList() {
       const ravg = Number(c.ratingAvg || 0);
       return ravg >= rmin;
     });
-  }, [rows, nameQ, expQ, expertise, qual, ratingMin]);
+  }, [rows, nameQ, expertise, qual, ratingMin]);
 
   // sorting
   const sorted = useMemo(() => {
@@ -136,7 +152,6 @@ export default function ConsultantsList() {
   useEffect(() => {
     const next = new URLSearchParams();
     if (nameQ) next.set('q', nameQ);
-    if (expQ) next.set('exp', expQ);
     if (expertise !== 'All') next.set('expertise', expertise);
     if (qual !== 'All') next.set('qual', qual);
     if (ratingMin !== 'All') next.set('r', ratingMin);
@@ -145,7 +160,7 @@ export default function ConsultantsList() {
     const current = params.toString();
     const nextStr = next.toString();
     if (current !== nextStr) setParams(next, { replace: true });
-  }, [nameQ, expQ, expertise, qual, ratingMin, sort, view]); // eslint-disable-line
+  }, [nameQ, expertise, qual, ratingMin, sort, view]); // eslint-disable-line
 
   const qs = params.toString() ? `?${params.toString()}` : '';
 
@@ -166,43 +181,43 @@ export default function ConsultantsList() {
 
       {/* top bar with back buttons + auth + admin links (Users, Permissions, Manual) */}
       <div className="list-topbar">
-  <div className="brand">
-    <img
-      className="brand-logo"
-      src={logo}
-      alt="EML Consultants"
-      onClick={() => navigate('/')}
-    />
-    <div className="brand-text" onClick={() => navigate('/')}>
-      Consultants Database
-    </div>
-  </div>
+        <div className="brand">
+          <img
+            className="brand-logo"
+            src={logo}
+            alt="EML Consultants"
+            onClick={() => navigate('/')}
+          />
+          <div className="brand-text" onClick={() => navigate('/')}>
+            Consultants Database
+          </div>
+        </div>
 
- {/*} <div className="top-left">
+        {/*} <div className="top-left">
     <button className="btn" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}>← Back</button>
     <button className="btn" onClick={() => navigate('/')}>← Back to list</button>
   </div> */}
         <div className="top-right">
           {user ? (
-  <span className="user-pill">
-    <img
-      className="avatar"
-      src={user.photo || user.avatarUrl || avatarIcon}
-      alt="Profile"
-      onError={(e) => { e.currentTarget.src = avatarIcon; }}
-    />
-    {user.name || user.email}
-    <button className="link" onClick={logout}>&nbsp;Log out</button>
-    {user.role === 'admin' && (
-      <>
-        <a className="link" href="/admin/users" style={{ marginLeft: 8 }}>Users</a>
-        <a className="link" href="/admin/permissions" style={{ marginLeft: 8 }}>Permissions</a>
-      </>
-    )}
-  </span>
-) : (
-  <a className="link" href="/login">Sign in</a>
-)}
+            <span className="user-pill">
+              <img
+                className="avatar"
+                src={user.photo || user.avatarUrl || avatarIcon}
+                alt="Profile"
+                onError={(e) => { e.currentTarget.src = avatarIcon; }}
+              />
+              {user.name || user.email}
+              <button className="link" onClick={logout}>&nbsp;Log out</button>
+              {user.role === 'admin' && (
+                <>
+                  <a className="link" href="/admin/users" style={{ marginLeft: 8 }}>Users</a>
+                  <a className="link" href="/admin/permissions" style={{ marginLeft: 8 }}>Permissions</a>
+                </>
+              )}
+            </span>
+          ) : (
+            <a className="link" href="/login">Sign in</a>
+          )}
         </div>
       </div>
 
@@ -222,20 +237,9 @@ export default function ConsultantsList() {
             <label className="lbl">Search consultants</label>
             <input
               className="input"
-              placeholder="Name, email, phone, expertise, tags…"
+              placeholder="Type keywords separated by commas"
               value={nameQ}
-              onChange={(e) => { setNameQ(e.target.value); if (!e.target.value) setExpQ(''); }}
-            />
-          </div>
-          <div className="cell exp">
-            <label className="lbl">Search experience</label>
-            <input
-              className="input"
-              placeholder="Role, organization, location, highlight…"
-              value={expQ}
-              disabled={!nameQ.trim()}
-              onChange={(e) => setExpQ(e.target.value)}
-              title={!nameQ.trim() ? "Type something in 'Search consultants' first" : ''}
+              onChange={(e) => setNameQ(e.target.value)}
             />
           </div>
         </div>
@@ -247,7 +251,7 @@ export default function ConsultantsList() {
               {expertiseOptions.map((q) => <option key={q} value={q}>{q}</option>)}
             </select>
           </div>
-         {/* <div className="cell">
+          {/* <div className="cell">
             <label className="lbl">Qualification</label>
             <select className="select" value={qual} onChange={(e) => setQual(e.target.value)}>
               {qualOptions.map((q) => <option key={q} value={q}>{q}</option>)}
@@ -284,7 +288,13 @@ export default function ConsultantsList() {
             <label className="lbl">&nbsp;</label>
             <button
               className="btn-clear"
-              onClick={() => { setNameQ(''); setExpQ(''); setExpertise('All'); setQual('All'); setRatingMin('All'); setSort('name-asc'); }}
+              onClick={() => {
+                setNameQ('');
+                setExpertise('All');
+                setQual('All');
+                setRatingMin('All');
+                setSort('name-asc');
+              }}
             >
               Clear
             </button>
@@ -337,22 +347,20 @@ export default function ConsultantsList() {
                             </div>
                           </td>
                           <td className="cell-actions">
-  {(user?.role === 'admin' || user?.role === 'editor') && (
-    <button
-      className="btn-small"
-      onClick={() => navigate(`/consultants/${c._id}${qs}`)}
-    >
-      Edit
-    </button>
-  )}
-  {(user?.role === 'admin' || user?.role === 'editor') && (
-    <button className="btn-small danger" onClick={() => handleDelete(c._id)}>
-      Delete
-    </button>
-  )}
-</td>
-
-                          
+                            {(user?.role === 'admin' || user?.role === 'editor') && (
+                              <button
+                                className="btn-small"
+                                onClick={() => navigate(`/consultants/${c._id}${qs}`)}
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {(user?.role === 'admin' || user?.role === 'editor') && (
+                              <button className="btn-small danger" onClick={() => handleDelete(c._id)}>
+                                Delete
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })
