@@ -892,7 +892,7 @@ export default function ConsultantDetails() {
                     className="input"
                     value={reviewProjectName}
                     onChange={(e) => setReviewProjectName(e.target.value)}
-                    placeholder="e.g. PRNA – Northern Province"
+                    placeholder="Project Name"
                   />
 
                   <label className="lbl">Evaluation date</label>
@@ -903,13 +903,13 @@ export default function ConsultantDetails() {
                     onChange={(e) => setReviewProjectDate(e.target.value)}
                   />
 
-                  <label className="lbl">Short note (optional)</label>
+                  <label className="lbl">Project Manager Note</label>
                   <textarea
                     className="input textarea"
                     rows={3}
                     value={reviewNote}
                     onChange={(e) => setReviewNote(e.target.value)}
-                    placeholder="Add a brief remark about this consultant…"
+                    placeholder="…"
                   />
 
                   <div className="actions-row">

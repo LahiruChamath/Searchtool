@@ -295,8 +295,8 @@
   border-color: rgba(56, 189, 248, 0.9);
   background: radial-gradient(
     circle at 50% 0%,
-    rgba(78, 142, 32, 0.25),
-    rgba(9, 104, 13, 0.98)
+    rgba(115, 148, 90, 0.25),
+    rgba(14, 155, 21, 0.98)
   );
   box-shadow: 0 0 16px rgba(130, 243, 120, 0.45);
 }
