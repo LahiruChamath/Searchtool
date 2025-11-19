@@ -1,4 +1,3 @@
-// frontend/src/ConsultantDetails.js
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
@@ -6,7 +5,6 @@ import "./ConsultantDetails.css";
 import { useAuth } from "./AuthContext";
 import AssociationsBox from "./components/AssociationsBox";
 
-// ---------- helpers ----------
 const arr = (v) => (Array.isArray(v) ? v.filter(Boolean) : v ? [v] : []);
 const csvShow = (v) => arr(v).join(", ");
 const csvParse = (s) =>
@@ -49,7 +47,6 @@ const fmtMonth = (d) => {
 const monthToISO = (m) =>
   m ? new Date(`${m}-01T00:00:00Z`).toISOString() : null;
 
-// ---------- review questions & helper ----------
 const REVIEW_QUESTIONS = [
   {
     id: "technical_expertise",
@@ -117,7 +114,6 @@ const computeReviewOverall = (review) => {
   return 0;
 };
 
-// ---------- component ----------
 export default function ConsultantDetails() {
   const { id } = useParams();
   const { user, getMyPermissions } = useAuth();
@@ -133,7 +129,6 @@ export default function ConsultantDetails() {
   const [saving, setSaving] = useState(false);
   const [perms, setPerms] = useState({});
 
-  // form for Details edit
   const [form, setForm] = useState({
     name: "",
     category: "",
@@ -146,15 +141,13 @@ export default function ConsultantDetails() {
     img: "",
   });
 
-  // Photo upload
   const [photoFile, setPhotoFile] = useState(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Reviews – structured matrix
   const [reviewAnswers, setReviewAnswers] = useState(() => {
     const initial = {};
     REVIEW_QUESTIONS.forEach((q) => {
-      initial[q.id] = 3; // default mid value
+      initial[q.id] = 3;
     });
     return initial;
   });
@@ -195,7 +188,6 @@ export default function ConsultantDetails() {
   };
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   useEffect(() => {
